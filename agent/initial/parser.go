@@ -1,11 +1,14 @@
 package initial
 
 import (
+	"Stowaway/utils"
 	"errors"
 	"flag"
 	"log"
 	"net"
 	"os"
+	"strconv"
+	"strings"
 )
 
 const (
@@ -32,6 +35,7 @@ type Options struct {
 	Upstream   string
 	Downstream string
 	Charset    string
+	ConfigFile string
 }
 
 var Args *Options
@@ -50,15 +54,67 @@ func init() {
 	flag.StringVar(&Args.Upstream, "up", "raw", "")
 	flag.StringVar(&Args.Downstream, "down", "raw", "")
 	flag.StringVar(&Args.Charset, "cs", "utf-8", "")
+	flag.StringVar(&Args.ConfigFile, "file", "", "config file, if file not exist, default name [cfg.properties] will be use")
 
 	flag.Usage = func() {}
+}
+
+func parseConfigFile(configFile string) *Options {
+	content := utils.ReadFile(configFile)
+	lines := strings.Split(content, "\n")
+	Args = new(Options)
+	for _, line := range lines {
+		config := strings.Split(line, "=")
+		if config[0] == "s" {
+			Args.Secret = config[1]
+			continue
+		} else if config[0] == "l" {
+			Args.Listen = config[1]
+			continue
+		} else if config[0] == "reconnect" {
+			reconnect, _ := strconv.ParseUint(config[1], 10, 64)
+			Args.Reconnect = reconnect
+			continue
+		} else if config[0] == "c" {
+			Args.Connect = config[1]
+			continue
+		} else if config[0] == "rehost" {
+			Args.ReuseHost = config[1]
+			continue
+		} else if config[0] == "report" {
+			Args.ReusePort = config[1]
+			continue
+		} else if config[0] == "proxy" {
+			Args.Proxy = config[1]
+			continue
+		} else if config[0] == "proxyu" {
+			Args.ProxyU = config[1]
+			continue
+		} else if config[0] == "proxyp" {
+			Args.ProxyP = config[1]
+			continue
+		} else if config[0] == "up" {
+			Args.Upstream = config[1]
+			continue
+		} else if config[0] == "down" {
+			Args.Downstream = config[1]
+			continue
+		} else if config[0] == "cs" {
+			Args.Charset = config[1]
+			continue
+		}
+	}
+	return Args
 }
 
 // ParseOptions Parsing user's options
 func ParseOptions() *Options {
 
 	flag.Parse()
-
+	//add config file support
+	if Args.ConfigFile != "" {
+		Args = parseConfigFile(Args.ConfigFile)
+	}
 	if Args.Listen != "" && Args.Connect == "" && Args.Reconnect == 0 && Args.ReuseHost == "" && Args.ReusePort == "" && Args.Proxy == "" && Args.ProxyU == "" && Args.ProxyP == "" { // ./stowaway_agent -l <port> -s [secret]
 		Args.Mode = NORMAL_PASSIVE
 		log.Printf("[*] Starting agent node passively.Now listening on port %s\n", Args.Listen)

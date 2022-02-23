@@ -7,7 +7,6 @@ import (
 	"os"
 	"runtime"
 
-	"Stowaway/admin/cli"
 	"Stowaway/admin/initial"
 	"Stowaway/admin/printer"
 	"Stowaway/admin/process"
@@ -32,7 +31,7 @@ func main() {
 
 	protocol.DecideType("raw", options.Downstream)
 
-	cli.Banner()
+	// cli.Banner()
 
 	topo := topology.NewTopology()
 	go topo.Run()

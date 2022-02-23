@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 
 	"Stowaway/admin/printer"
+	"Stowaway/utils"
 
 	"github.com/nsf/termbox-go"
 )
@@ -28,6 +30,7 @@ type Options struct {
 	ProxyU     string
 	ProxyP     string
 	Downstream string
+	ConfigFile string
 }
 
 var Args *Options
@@ -42,8 +45,40 @@ func init() {
 	flag.StringVar(&Args.ProxyU, "proxyu", "", "socks5 username")
 	flag.StringVar(&Args.ProxyP, "proxyp", "", "socks5 password")
 	flag.StringVar(&Args.Downstream, "down", "raw", "")
-
+	flag.StringVar(&Args.ConfigFile, "file", "", "config file, if file not exist, default name [cfg.properties] will be use")
 	flag.Usage = newUsage
+}
+
+func parseConfigFile(configFile string) *Options {
+	content := utils.ReadFile(configFile)
+	lines := strings.Split(content, "\n")
+	Args = new(Options)
+	for _, line := range lines {
+		config := strings.Split(line, "=")
+		if config[0] == "s" {
+			Args.Secret = config[1]
+			continue
+		} else if config[0] == "l" {
+			Args.Listen = config[1]
+			continue
+		} else if config[0] == "c" {
+			Args.Connect = config[1]
+			continue
+		} else if config[0] == "proxy" {
+			Args.Proxy = config[1]
+			continue
+		} else if config[0] == "proxyu" {
+			Args.ProxyU = config[1]
+			continue
+		} else if config[0] == "proxyp" {
+			Args.ProxyP = config[1]
+			continue
+		} else if config[0] == "down" {
+			Args.Downstream = config[1]
+			continue
+		}
+	}
+	return Args
 }
 
 func newUsage() {
@@ -66,6 +101,10 @@ Options:
 func ParseOptions() *Options {
 	flag.Parse()
 
+	//add config file support
+	if Args.ConfigFile != "" {
+		Args = parseConfigFile(Args.ConfigFile)
+	}
 	if Args.Listen != "" && Args.Connect == "" && Args.Proxy == "" { // ./stowaway_admin -l <port> -s [secret]
 		Args.Mode = NORMAL_PASSIVE
 		printer.Warning("[*] Starting admin node on port %s\r\n", Args.Listen)
